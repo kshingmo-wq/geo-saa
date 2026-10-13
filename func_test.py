@@ -195,7 +195,10 @@ oj = j(text)
 od = (oj or {}).get("data") or {}
 check("10.2 资产总览已统计到新数据",
       (od.get("knowledgeTotal", 0) or 0) >= 1 or (od.get("totalAssets", 0) or 0) >= 1,
-      "knowledgeTotal=%s totalAssets=%s" % (od.get("knowledgeTotal"), od.get("totalAssets")))
+      "knowledgeTotal=%s totalAssets=%s brandTotal=%s" % (od.get("knowledgeTotal"), od.get("totalAssets"), od.get("brandTotal")))
+check("10.3 brandTotal 字段已返回品牌数",
+      od.get("brandTotal") is not None and od.get("brandTotal") >= 1,
+      "brandTotal=%s" % od.get("brandTotal"))
 
 # ---------- 11. 鉴权边界 ----------
 code, text = req("GET", "/api/v1/content/list", params={"pageNum": 1, "pageSize": 5})

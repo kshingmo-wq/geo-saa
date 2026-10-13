@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-v2.0.0-blue.svg)](https://github.com/wch887292/geo-saa/releases/tag/v2.0.0)
 [![Java](https://img.shields.io/badge/Java-17-orange.svg)]()
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-brightgreen.svg)]()
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-brightgreen.svg)]()
 [![Vue](https://img.shields.io/badge/Vue-3-4FC08D.svg)]()
 
 </div>
@@ -54,8 +54,8 @@ Maintained by **Jinjiang Feihongzhi Technology Enterprise Management Co., Ltd. Â
 | Layer | Technology |
 |------|------|
 | Frontend | Vue 3 + Vite + Element Plus + ECharts + Pinia |
-| Backend | Spring Boot 3.2 + Spring Security + MyBatis-Plus |
-| Database | MySQL 8.0 + Redis 7 |
+| Backend | Spring Boot 4.1 + Spring Security + MyBatis-Plus |
+| Database | MySQL 8.0 + Redis 5+ |
 | Build | Maven 3.9 + npm |
 | Runtime | JDK 17 + Node.js 18+ |
 
@@ -66,7 +66,7 @@ Maintained by **Jinjiang Feihongzhi Technology Enterprise Management Co., Ltd. Â
 - JDK 17 (Microsoft Build of OpenJDK recommended)
 - Node.js 18+
 - MySQL 8.0 (running, port 3306)
-- Redis 7 (running, port 6379)
+- Redis 5+ (running, port 6379)
 - Maven 3.9 (optional; scripts handle it)
 
 ### One-click start

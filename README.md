@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-v2.0.0-blue.svg)](https://github.com/wch887292/geo-saa/releases/tag/v2.0.0)
 [![Java](https://img.shields.io/badge/Java-17-orange.svg)]()
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-brightgreen.svg)]()
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-brightgreen.svg)]()
 [![Vue](https://img.shields.io/badge/Vue-3-4FC08D.svg)]()
 
 </div>
@@ -59,8 +59,8 @@
 | 层级 | 技术 |
 |------|------|
 | 前端 | Vue 3 + Vite + Element Plus + ECharts + Pinia |
-| 后端 | Spring Boot 3.2 + Spring Security + MyBatis-Plus |
-| 数据库 | MySQL 8.0 + Redis 7 |
+| 后端 | Spring Boot 4.1 + Spring Security + MyBatis-Plus |
+| 数据库 | MySQL 8.0 + Redis 5+ |
 | 构建 | Maven 3.9 + npm |
 | 运行环境 | JDK 17 + Node.js 18+ |
 
@@ -71,7 +71,7 @@
 - JDK 17（推荐 Microsoft Build of OpenJDK）
 - Node.js 18+
 - MySQL 8.0（运行中，端口 3306）
-- Redis 7（运行中，端口 6379）
+- Redis 5+（运行中，端口 6379）
 - Maven 3.9（可选，脚本会自动处理）
 
 ### 一键启动
