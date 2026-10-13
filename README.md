@@ -129,7 +129,7 @@ npx vite --host
 
 - 前端地址: `http://localhost:3000`
 - 后端地址: `http://localhost:8080`
-- 默认管理员: `admin` / `admin123`
+- 默认管理员: `admin` / `admin123`（仅限本地开发，见 [Docker 部署](#docker-部署)的改密说明）
 
 ## Docker 部署
 
@@ -138,17 +138,54 @@ npx vite --host
 - Docker 24+
 - Docker Compose 2+
 
-### 启动
-
-```powershell
-.\deploy.ps1
-```
-
-或手动执行：
+### 第0 步：环境预检（别跳过）
 
 ```bash
+bash scripts/preflight.sh          # Linux/macOS/Git Bash
+.\scripts\preflight.ps1           # Windows PowerShell
+```
+
+一次性列出缺什么：Docker 是否安装、**daemon 是否启动**、端口是否被占、`.env` 是否齐全、
+JWT 强度够不够。90% 的"部署失败"都是这几类原因，先跑这步能省掉大量试错。
+
+### 第 1 步：首次部署必须改密 ⚠️
+
+`init.sql` 注入的管理员 `admin / admin123`，其 BCrypt 散列**固定写在公开仓库里**，
+等同于凭据泄露。后端在生产档案下会检查数据库口令是否仍是默认值，**是则拒绝启动**。
+
+```bash
+# 1) 生成 BCrypt 散列（明文只留在你的终端）
+python -c "import bcrypt;print(bcrypt.hashpw(b'你的新密码',bcrypt.gensalt(10)).decode())"
+
+# 2) 填进 scripts/change_password.sql 的 <NEW_BCRYPT_HASH>，然后执行
+docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" geo_saa' \
+  < scripts/change_password.sql
+```
+
+仅本地演示、明确知道风险时，可在 `.env` 里设 `DEFAULT_PASSWORD_ACTION=disabled` 放行。
+
+### 第 2 步：启动
+
+```bash
+bash scripts/deploy.sh          # Linux/macOS/Git Bash（自动生成随机密钥并校验）
+.\scripts\deploy.ps1                # Windows PowerShell
+```
+
+或手动执行（需自行准备 `.env`）：
+
+```bash
+cp .env.example .env    # 按注释填写 JWT_SECRET / MYSQL_PASSWORD 等
 docker compose up -d --build
 ```
+
+### 第 3 步：验收
+
+```bash
+bash scripts/healthcheck.sh         # 或 .\scripts\healthcheck.ps1
+```
+
+覆盖容器状态、健康端点、登录、鉴权边界、核心业务，并回归验证已修复的缺陷
+（批量生成不再 500、重复提交返回 400、错误密码返回 401）。
 
 ### 访问
 
@@ -157,15 +194,20 @@ docker compose up -d --build
 | 前端 | `http://localhost` |
 | 后端 API | `http://localhost:8080` |
 | RabbitMQ 管理 | `http://localhost:15672` (guest/guest) |
-| 默认管理员 | `admin` / `admin123` |
+| 默认管理员 | `admin` / `admin123` — **仅本地演示，生产必须改密** |
 
 ## 项目结构
 
 ```
 geo-saa/
 ├── start.ps1                  # 一键启动脚本（本地开发）
-├── deploy.ps1                 # Docker 部署脚本
+├── deploy.sh / deploy.ps1     # 兼容入口，转发到 scripts/deploy.*
 ├── docker-compose.yml         # Docker Compose 编排
+├── scripts/                   # 部署与验收脚本
+│   ├── preflight.sh / .ps1    # 环境就绪预检（部署前先跑）
+│   ├── deploy.sh / .ps1       # 一键部署（生成随机密钥 + 健康等待）
+│   ├── healthcheck.sh / .ps1  # 部署验收（含已修复缺陷回归）
+│   └── change_password.sql    # 首次部署改密助手
 ├── geo-saa-backend/           # 后端服务
 │   ├── pom.xml
 │   ├── docker/

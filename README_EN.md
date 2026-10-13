@@ -130,17 +130,57 @@ Frontend starts at `http://localhost:3000`; Vite proxies `/api` to the backend.
 - Docker 24+
 - Docker Compose 2+
 
-### Start
-
-```powershell
-.\deploy.ps1
-```
-
-Or manually:
+### Step 0: Preflight check (don't skip)
 
 ```bash
+bash scripts/preflight.sh          # Linux/macOS/Git Bash
+.\scripts\preflight.ps1           # Windows PowerShell
+```
+
+Reports everything missing in one pass: Docker installed?, **daemon running?**,
+ports free?, `.env` complete?, JWT secret strong enough? 90% of "deployment failed"
+reports are one of these.
+
+### Step 1: Change the default password on first deploy ⚠️
+
+The `admin / admin123` account seeded by `init.sql` has its BCrypt hash **committed
+in a public repository** — that is a leaked credential. In the `prod` profile the
+backend refuses to start while the stored hash still matches the default.
+
+```bash
+# 1) Generate a BCrypt hash (plaintext stays in your terminal)
+python -c "import bcrypt;print(bcrypt.hashpw(b'your-new-password',bcrypt.gensalt(10)).decode())"
+
+# 2) Put it into <NEW_BCRYPT_HASH> in scripts/change_password.sql, then run
+docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" geo_saa' \
+  < scripts/change_password.sql
+```
+
+For local demos where you accept the risk, set `DEFAULT_PASSWORD_ACTION=disabled` in `.env`.
+
+### Step 2: Start
+
+```bash
+bash scripts/deploy.sh            # Linux/macOS/Git Bash (generates random secrets)
+.\scripts\deploy.ps1               # Windows PowerShell
+```
+
+Or manually (prepare `.env` yourself):
+
+```bash
+cp .env.example .env    # fill in JWT_SECRET / MYSQL_PASSWORD etc.
 docker compose up -d --build
 ```
+
+### Step 3: Verify
+
+```bash
+bash scripts/healthcheck.sh       # or .\scripts\healthcheck.ps1
+```
+
+Covers container state, health endpoints, login, auth boundaries, core APIs, and
+regression-checks the fixed defects (batch generate no longer 500, duplicate submit
+returns 400, wrong password returns 401).
 
 ### Access
 
@@ -149,7 +189,7 @@ docker compose up -d --build
 | Frontend | `http://localhost` |
 | Backend API | `http://localhost:8080` |
 | RabbitMQ management | `http://localhost:15672` (guest/guest) |
-| Default admin | `admin` / `admin123` |
+| Default admin | `admin` / `admin123` — **local demo only, change it in production** |
 
 ## Project Structure
 

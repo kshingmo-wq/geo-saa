@@ -15,6 +15,10 @@ spring:
 app:
   rabbitmq:
     enabled: false
+  security:
+    # 开发档案下管理员口令守卫仅告警不阻断，否则每次 pull 后本地开发都要先改密。
+    # prod 档案的默认值为 fail，不受此项影响。
+    default-password-action: ${DEFAULT_PASSWORD_ACTION:warn}
 
 jwt:
   # 仅供本地开发使用的固定密钥。生产环境由 application-prod.yml 强制要求 JWT_SECRET 环境变量。
