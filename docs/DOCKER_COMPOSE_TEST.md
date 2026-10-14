@@ -1,12 +1,12 @@
 # Docker Compose 实测指南（O8）
 
-> **验证状态**：编排配置已通过静态审查 + CI 构建验证；后端全链路已在本机以等价配置
-> （MySQL 8 + Redis 5，非容器）实测通过（冒烟 15/15、功能 17/18、单元 47/47）。
-> `docker compose up` 本身尚未在装有 Docker daemon 的机器上跑过——本文档的验证清单
-> 就是为此准备的，任何人执行后把结果贴回即可把状态升级为「容器环境已验证」。
+> **验证状态**：编排配置已通过静态审查 + CI 自动验证（见下方「CI 验证」）。
+> 后端全链路已在本机以等价配置（MySQL 8 + Redis 5，非容器）实测通过
+> （冒烟 15/15、功能 17/18、单元 47/47）。
+> `docker compose up` 本身尚未在装有 Docker daemon 的机器上完整跑过——
+> 本文档的验证清单就是为此准备的，任何人执行后把结果贴回即可把状态升级为
+>「容器环境已验证」。
 >
-> 已确认无误的部分：编排结构完整、环境变量注入齐全、`init.sql` 自动初始化（含
-> `asset_record` 表）、healthcheck/restart/资源上限/本机端口绑定均已就位。
 > 前置的 Docker daemon 未就绪属于环境问题，不是配置问题——`scripts/preflight.sh`
 > 会把这类问题一次性列清楚。
 
@@ -137,3 +137,38 @@ docker compose logs backend | grep "GEO 定时采集"   # 期望出现采集完�
   若改过表结构需 `docker compose down -v` 后重建（会清空数据）。
 - **端口占用**：3306/6379/5672/15672/8080/80 与本地服务冲突时，先停本机实例或改 compose 端口映射。
 - **本机实测后**：把执行结果（`docker compose ps` + 冒烟输出）贴回，可更新本文件状态为「已验证」。
+
+---
+
+## 附 A、本轮修复的 Docker 真实缺陷（5 项）
+
+这 5 个问题会让 `docker compose up --build` **直接失败或永久卡住**，不是理论风险：
+
+| # | 缺陷 | 后果 | 修复 |
+|---|------|------|------|
+| 1 | 后端 Dockerfile `COPY target/geo-saa-backend.jar`，但 `.gitignore` 第 6 行忽略 `*.jar` | 全新 clone 后 `target/` 是空的，**构建直接失败** | 改为多阶段构建，容器内执行 `mvn package`，jar 回归为构建产物 |
+| 2 | 实际 jar 名是 `geo-saa-backend-2.0.0.jar`（pom 无 `<finalName>`），Dockerfile 写的是 `geo-saa-backend.jar` | 即使本地先跑了 `mvn package`，COPY 仍然找不到文件 | 按 `artifactId-version` 精确命名 |
+| 3 | 基础镜像不含 `curl`，而 compose 的 healthcheck 写 `curl -fsS ...` | 容器**永久 unhealthy** → `frontend` 的 `depends_on: service_healthy` 死锁等不到后端 → 整条链路起不来 | 改用 JDK 自带 `java.net.http` 探针（`docker/HealthProbe.java`） |
+| 4 | 前端 Dockerfile 用 `node:18-alpine`，但项目用 Vite 8（要求 Node 20.19+/22.12+） | `npm run build` **必然失败**（`crypto.hash` 不可用） | 升级到 `node:22-alpine` |
+| 5 | 前端 Dockerfile 用 `npm ci`，但 lockfile 由 Windows 生成 | Linux 上漏装 rollup 原生模块，构建报 `Cannot find module` | 改为 `npm install`（与 CI 侧同理） |
+
+> 缺陷 4、5 是 CI 注释里已记录过的问题——同一个坑在 Docker 构建里再次出现，
+> 说明只修 CI 不修 Dockerfile 是不够的。
+
+## 附 B、CI 验证（本机无 Docker daemon 时的替代路径）
+
+新增 `.github/workflows/docker.yml`，在 GitHub Actions（runner 自带 Docker daemon）
+上自动验证：
+
+| Job | 验证内容 |
+|-----|---------|
+| `compose-validate` | `docker compose config --quiet` 语法与变量闭环校验；`.env` 未入库检查 |
+| `docker-build` | 真实构建两个镜像；校验 jar + 探针存在；探针在无后端时正确判定 unhealthy；两个镜像均声明 `HEALTHCHECK` |
+
+这意味着**上述 5 个缺陷会被 CI 自动拦住**，不再依赖人工发现。
+
+本机想手动复现：
+
+```bash
+docker compose --env-file .env config --quiet   # 只校验，不启动
+```

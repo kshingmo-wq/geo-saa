@@ -9,6 +9,8 @@
 [![Java](https://img.shields.io/badge/Java-17-orange.svg)]()
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-brightgreen.svg)]()
 [![Vue](https://img.shields.io/badge/Vue-3-4FC08D.svg)]()
+[![CI](https://github.com/wch887292/geo-saa/actions/workflows/ci.yml/badge.svg)](https://github.com/wch887292/geo-saa/actions/workflows/ci.yml)
+[![Docker](https://github.com/wch887292/geo-saa/actions/workflows/docker.yml/badge.svg)](https://github.com/wch887292/geo-saa/actions/workflows/docker.yml)
 
 </div>
 

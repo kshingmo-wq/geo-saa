@@ -143,7 +143,10 @@ services:
         condition: service_healthy
     healthcheck:
       # 业务健康检查端点（免鉴权）。start_period 给 Spring Boot 留足冷启动时间
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/api/v1/system/health || exit 1"]
+      # 探针用 JVM 自带的 java.net.http 而非 curl：运行阶段是 JRE 镜像，不含 curl/wget。
+      # 原版写 `curl -fsS ...`，在 JRE 镜像里永远返回非 0 → 容器永久 unhealthy
+      # → frontend 的 depends_on: service_healthy 死锁等不到后端 → 整条链路起不来。
+      test: ["CMD", "java", "-cp", "probe.jar", "HealthProbe"]
       interval: 15s
       timeout: 5s
       retries: 10

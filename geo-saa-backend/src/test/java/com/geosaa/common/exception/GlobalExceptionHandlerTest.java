@@ -25,21 +25,39 @@ class GlobalExceptionHandlerTest {
 
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
-    /** 读取方法上的 @ResponseStatus，验证 HTTP 状态码语义。 */
+    /**
+     * 读取方法上的 @ResponseStatus，验证 HTTP 状态码语义。
+     *
+     * <p>注意：必须优先匹配「参数类型精确相等」的处理器。GlobalExceptionHandler 里
+     * {@code handleNotFound} 的参数类型是 DataIntegrityViolationException 的父类，
+     * 用 {@code isAssignableFrom} 遍历时若先撞上它，会误读到 NOT_FOUND(404)——
+     * 而 handleNotFound 的 @ExceptionHandler 注解里列的是另一个异常类型，
+     * 根本不会处理 DataIntegrityViolationException。
+     * getDeclaredMethods() 的返回顺序 JVM 不作保证，这类测试天然脆弱。
+     */
     private HttpStatus statusOf(Class<? extends Throwable> ex) throws Exception {
-        Method m = null;
+        Method fallback = null;
         for (Method candidate : GlobalExceptionHandler.class.getDeclaredMethods()) {
-            if (candidate.getAnnotation(org.springframework.web.bind.annotation.ExceptionHandler.class) != null
-                    && candidate.getParameterCount() == 1
-                    && candidate.getParameterTypes()[0].isAssignableFrom(ex)) {
-                m = candidate;
-                break;
+            if (candidate.getAnnotation(org.springframework.web.bind.annotation.ExceptionHandler.class) == null
+                    || candidate.getParameterCount() != 1) {
+                continue;
+            }
+            Class<?> declared = candidate.getParameterTypes()[0];
+            if (declared == ex) {
+                return statusAnnotationOf(candidate, ex);
+            }
+            if (declared.isAssignableFrom(ex) && fallback == null) {
+                fallback = candidate;
             }
         }
-        assertNotNull(m, "未找到处理 " + ex.getSimpleName() + " 的 @ExceptionHandler 方法");
+        assertNotNull(fallback, "未找到处理 " + ex.getSimpleName() + " 的 @ExceptionHandler 方法");
+        return statusAnnotationOf(fallback, ex);
+    }
+
+    private HttpStatus statusAnnotationOf(Method m, Class<? extends Throwable> ex) {
         org.springframework.web.bind.annotation.ResponseStatus rs =
                 m.getAnnotation(org.springframework.web.bind.annotation.ResponseStatus.class);
-        assertNotNull(rs, ex.getSimpleName() + " 的处理器缺少 @ResponseStatus，HTTP 状态码会退化为 200");
+        assertNotNull(rs, m.getName() + " 缺少 @ResponseStatus，HTTP 状态码会退化为 200");
         return rs.value();
     }
 
