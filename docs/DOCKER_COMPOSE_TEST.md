@@ -147,13 +147,27 @@ docker compose logs backend | grep "GEO 定时采集"   # 期望出现采集完�
 | # | 缺陷 | 后果 | 修复 |
 |---|------|------|------|
 | 1 | 后端 Dockerfile `COPY target/geo-saa-backend.jar`，但 `.gitignore` 第 6 行忽略 `*.jar` | 全新 clone 后 `target/` 是空的，**构建直接失败** | 改为多阶段构建，容器内执行 `mvn package`，jar 回归为构建产物 |
-| 2 | 实际 jar 名是 `geo-saa-backend-2.0.0.jar`（pom 无 `<finalName>`），Dockerfile 写的是 `geo-saa-backend.jar` | 即使本地先跑了 `mvn package`，COPY 仍然找不到文件 | 按 `artifactId-version` 精确命名 |
-| 3 | 基础镜像不含 `curl`，而 compose 的 healthcheck 写 `curl -fsS ...` | 容器**永久 unhealthy** → `frontend` 的 `depends_on: service_healthy` 死锁等不到后端 → 整条链路起不来 | 改用 JDK 自带 `java.net.http` 探针（`docker/HealthProbe.java`） |
-| 4 | 前端 Dockerfile 用 `node:18-alpine`，但项目用 Vite 8（要求 Node 20.19+/22.12+） | `npm run build` **必然失败**（`crypto.hash` 不可用） | 升级到 `node:22-alpine` |
-| 5 | 前端 Dockerfile 用 `npm ci`，但 lockfile 由 Windows 生成 | Linux 上漏装 rollup 原生模块，构建报 `Cannot find module` | 改为 `npm install`（与 CI 侧同理） |
+| 2 | 基础镜像不含 `curl`，而 compose 的 healthcheck 写 `curl -fsS ...` | 容器**永久 unhealthy** → `frontend` 的 `depends_on: service_healthy` 死锁等不到后端 → 整条链路起不来 | 改用 JDK 自带 `java.net.http` 探针（`docker/HealthProbe.java`） |
+| 3 | 前端 Dockerfile 用 `node:18-alpine`，但项目用 Vite 8（要求 Node 20.19+/22.12+） | `npm run build` **必然失败**（`crypto.hash` 不可用） | 升级到 `node:22-alpine` |
+| 4 | 前端 Dockerfile 用 `npm ci`，但 lockfile 由 Windows 生成 | Linux 上漏装 rollup 原生模块，构建报 `Cannot find module` | 改为 `npm install`（与 CI 侧同理） |
 
-> 缺陷 4、5 是 CI 注释里已记录过的问题——同一个坑在 Docker 构建里再次出现，
+> 缺陷 3、4 是 CI 注释里已记录过的问题——同一个坑在 Docker 构建里再次出现，
 > 说明只修 CI 不修 Dockerfile 是不够的。
+
+### 一次误判及其更正（保留记录，避免重犯）
+
+排查过程中曾把运行阶段的 COPY 从 `geo-saa-backend.jar` 改成 `geo-saa-backend-2.0.0.jar`，
+理由是「pom.xml 未配 `<finalName>`，故jar 带版本号」。**该判断是错的**：
+
+- `pom.xml` 第 124 行确实配置了 `<finalName>geo-saa-backend</finalName>`；
+- GitHub Actions 实测日志为 `Building jar: /build/target/geo-saa-backend.jar`。
+
+也就是说原版的 jar 名本来就是对的，改动反而会让 COPY 找不到文件。已改回，
+并在 Dockerfile 内留下注释说明该值与 `finalName` 的绑定关系。
+
+教训：静态审查时「顺手修好看起来不对的地方」比不改更危险。
+这个错误本机无法发现（本机无 Docker daemon），是 CI 实跑构建暴露的——
+这正是新增 `docker.yml` 的价值所在。
 
 ## 附 B、CI 验证（本机无 Docker daemon 时的替代路径）
 
