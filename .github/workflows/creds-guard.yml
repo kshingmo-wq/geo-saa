@@ -23,6 +23,7 @@ on:
       - 'docker-compose.yml'
       - 'verify_creds.py'
       - 'check_db_creds.py'
+      - 'creds_gate_negtest.py'
       - '.github/workflows/creds-guard.yml'
       - 'geo-saa-backend/src/main/resources/db/init.sql'
       - 'geo-saa-backend/src/main/resources/application-dev.yml'
@@ -38,6 +39,7 @@ on:
       - 'docker-compose.yml'
       - 'verify_creds.py'
       - 'check_db_creds.py'
+      - 'creds_gate_negtest.py'
       - '.github/workflows/creds-guard.yml'
       - 'geo-saa-backend/src/main/resources/db/init.sql'
       - 'geo-saa-backend/src/main/resources/application-dev.yml'
@@ -67,3 +69,9 @@ jobs:
         run: python verify_creds.py
       - name: Verify DB credential sources (check_db_creds.py)
         run: python check_db_creds.py
+      - name: Self-test the guard (negative tests)
+        # 防止门禁脚本自身被重构改空转：在临时副本里制造 5 类回归
+        # （散列变更未同步 Guard / 删 README 告警 / prod 硬编码 /
+        #  .env 清空 / 英文 FAQ 回归），每类都必须被对应脚本拦截。
+        # 变异只发生在临时目录，不触碰检出。
+        run: python creds_gate_negtest.py
