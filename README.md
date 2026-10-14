@@ -64,14 +64,14 @@
 | 后端 | Spring Boot 4.1 + Spring Security + MyBatis-Plus |
 | 数据库 | MySQL 8.0 + Redis 5+ |
 | 构建 | Maven 3.9 + npm |
-| 运行环境 | JDK 17 + Node.js 18+ |
+| 运行环境 | JDK 17 + Node.js 20.19+ / 22.12+ |
 
 ## 快速开始（本地开发）
 
 ### 前置条件
 
 - JDK 17（推荐 Microsoft Build of OpenJDK）
-- Node.js 18+
+- Node.js 20.19+ 或 22.12+（Vite 8 要求；更低版本构建时报 crypto.hash 不可用）
 - MySQL 8.0（运行中，端口 3306）
 - Redis 5+（运行中，端口 6379）
 - Maven 3.9（可选，脚本会自动处理）
@@ -157,7 +157,11 @@ JWT 强度够不够。90% 的"部署失败"都是这几类原因，先跑这步�
 **这一步不做，容器起不来**——这不是可选项。
 
 ```bash
-# 1) 生成 BCrypt 散列（明文只留在你的终端）
+# 0) 先只起 MySQL 并等它就绪（改密要连库；后端起不来是闸门的预期行为，不用管）
+docker compose up -d mysql
+docker compose ps mysql        # Status 出现 healthy 再继续
+
+# 1) 生成 BCrypt 散列（明文只留在你的终端；需先 pip install bcrypt）
 python -c "import bcrypt;print(bcrypt.hashpw(b'你的新密码',bcrypt.gensalt(10)).decode())"
 
 # 2) 填进 scripts/change_password.sql 的 <NEW_BCRYPT_HASH>，然后执行

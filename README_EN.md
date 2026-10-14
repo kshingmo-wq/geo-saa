@@ -57,14 +57,14 @@ Maintained by **Jinjiang Feihongzhi Technology Enterprise Management Co., Ltd. Â
 | Backend | Spring Boot 4.1 + Spring Security + MyBatis-Plus |
 | Database | MySQL 8.0 + Redis 5+ |
 | Build | Maven 3.9 + npm |
-| Runtime | JDK 17 + Node.js 18+ |
+| Runtime | JDK 17 + Node.js 20.19+ / 22.12+ |
 
 ## Quick Start (Local Dev)
 
 ### Prerequisites
 
 - JDK 17 (Microsoft Build of OpenJDK recommended)
-- Node.js 18+
+- Node.js 20.19+ or 22.12+ (required by Vite 8; older versions fail with crypto.hash unavailable)
 - MySQL 8.0 (running, port 3306)
 - Redis 5+ (running, port 6379)
 - Maven 3.9 (optional; scripts handle it)
@@ -149,7 +149,12 @@ backend refuses to start while the stored hash still matches the default.
 **Skip this and the containers won't start** â€” it is not optional.
 
 ```bash
-# 1) Generate a BCrypt hash (plaintext stays in your terminal)
+# 0) Start MySQL alone first and wait until healthy (the exec below needs the DB up;
+#    the backend staying down at this point is the guard working as intended)
+docker compose up -d mysql
+docker compose ps mysql        # continue once Status shows healthy
+
+# 1) Generate a BCrypt hash (plaintext stays in your terminal; pip install bcrypt first)
 python -c "import bcrypt;print(bcrypt.hashpw(b'your-new-password',bcrypt.gensalt(10)).decode())"
 
 # 2) Put it into <NEW_BCRYPT_HASH> in scripts/change_password.sql, then run

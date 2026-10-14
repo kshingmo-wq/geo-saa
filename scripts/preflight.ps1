@@ -246,15 +246,19 @@ function Test-LocalMode {
         Write-Miss 'Maven' '未安装且无 mvnw.cmd — https://maven.apache.org/download.cgi'
     }
 
-    # --- Node ---
+    # --- Node（Vite 8 要求 20.19+ / 22.12+，否则前端构建报 crypto.hash 不可用）---
     $node = Get-Command node -ErrorAction SilentlyContinue
     if (-not $node) {
         Write-Warn2 'Node.js' '未安装（仅构建前端时需要；用 Docker 模式可不装）'
     } else {
         $nv = ((& node -v 2>&1) | Select-Object -First 1) -join ''
-        $majorNode = [int](($nv -replace 'v', '' -split '\.')[0])
-        if ($majorNode -ge 18) { Write-Ok 'Node.js' "$nv（>= 18）" }
-        else { Write-Warn2 'Node.js' "$nv，建议 18+ — https://nodejs.org/" }
+        $nodeOk = $false
+        if ($nv -match '^v(\d+)\.(\d+)') {
+            $majNode = [int]$Matches[1]; $minNode = [int]$Matches[2]
+            if (($majNode -eq 20 -and $minNode -ge 19) -or ($majNode -eq 22 -and $minNode -ge 12) -or ($majNode -ge 23)) { $nodeOk = $true }
+        }
+        if ($nodeOk) { Write-Ok 'Node.js' "$nv（满足 Vite 8：20.19+ / 22.12+）" }
+        else { Write-Warn2 'Node.js' "$nv，需要 20.19+ 或 22.12+（Vite 8 要求，否则前端构建报 crypto.hash 不可用）— https://nodejs.org/" }
     }
 
     Write-Section '[2/5] 数据存储'

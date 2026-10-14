@@ -190,13 +190,17 @@ check_local() {
     c_fail "Maven" "未安装且无 mvnw — https://maven.apache.org/download.cgi"
   fi
 
-  # --- Node（前端构建）---
+  # --- Node（前端构建；Vite 8 要求 20.19+ / 22.12+，否则 crypto.hash 不可用）---
   if command -v node >/dev/null 2>&1; then
     nv="$(node -v 2>/dev/null | tr -d 'v')"
-    if [ -n "${nv:-}" ] && [ "${nv%%.*}" -ge 18 ] 2>/dev/null; then
-      c_ok "Node.js" "v${nv}（>= 18）"
+    nmaj="${nv%%.*}"
+    nrest="${nv#*.}"; nmin="${nrest%%.*}"
+    if { [ "$nmaj" -eq 20 ] && [ "$nmin" -ge 19 ]; } 2>/dev/null \
+      || { [ "$nmaj" -eq 22 ] && [ "$nmin" -ge 12 ]; } 2>/dev/null \
+      || [ "$nmaj" -ge 23 ] 2>/dev/null; then
+      c_ok "Node.js" "v${nv}（满足 Vite 8：20.19+ / 22.12+）"
     else
-      c_warn "Node.js" "v${nv:-未知}，建议 18+ — https://nodejs.org/"
+      c_warn "Node.js" "v${nv:-未知}，需要 20.19+ 或 22.12+（Vite 8 要求，否则前端构建报 crypto.hash 不可用）— https://nodejs.org/"
     fi
   else
     c_warn "Node.js" "未安装（仅构建前端时需要；用 Docker 模式可不装）"

@@ -37,7 +37,7 @@ MIT License.
 ### Q: What are the prerequisites for local dev?
 
 - JDK 17
-- Node.js 18+
+- Node.js 20.19+ or 22.12+ (required by Vite 8; older versions fail with crypto.hash unavailable)
 - MySQL 8.0 (running, port 3306)
 - Redis 7 (running, port 6379)
 - Maven 3.9 (scripts can handle it)
