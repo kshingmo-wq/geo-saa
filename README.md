@@ -154,6 +154,7 @@ JWT 强度够不够。90% 的"部署失败"都是这几类原因，先跑这步�
 
 `init.sql` 注入的管理员 `admin / admin123`，其 BCrypt 散列**固定写在公开仓库里**，
 等同于凭据泄露。后端在生产档案下会检查数据库口令是否仍是默认值，**是则拒绝启动**。
+**这一步不做，容器起不来**——这不是可选项。
 
 ```bash
 # 1) 生成 BCrypt 散列（明文只留在你的终端）
@@ -317,7 +318,13 @@ ai:
 ### 开发模式
 
 - RabbitMQ 默认禁用，不影响核心功能
-- 数据库默认凭据: `root` / `root`
+- 数据库开发凭据: `root` / `root`
+  - 来源是 `.env` 的 `MYSQL_USER` / `MYSQL_PASSWORD`，`.env.example` 已预置这组开发默认值，
+    `cp .env.example .env` 后可直接启动。
+  - **这组值只适用于本地开发**。生产部署前必须改成强口令：compose 用的是
+    `${MYSQL_PASSWORD}` 无默认值语法，改完 `.env` 后重启 `mysql` 容器生效。
+  - 注意 `application-dev.yml` **不包含 datasource 段**（无本地 MySQL 时用 `.env` 即可）；
+    datasource 只在 `application-prod.yml` 中配置，且全部为 `${...}` 变量引用、缺失即启动失败。
 - 日志级别: `com.geosaa: debug`
 
 ## 常见问题
@@ -330,7 +337,11 @@ Stop-Process -Id <PID> -Force
 ```
 
 ### Q: 数据库连接失败
-A: 确保 MySQL 已启动，凭据为 `root/root`，或修改 `application-dev.yml` 中的配置。
+A: 先确认 MySQL 容器已启动（`docker compose ps`），再核对 `.env` 里的
+`MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_USER` / `MYSQL_PASSWORD`。
+用 Docker 时 `MYSQL_HOST` 应为 `mysql`（服务名）而非 `localhost`；
+连本机 MySQL 才用 `localhost`，此时需在 `application-dev.yml` 的
+`spring.datasource` 段补充配置——该段默认不存在，属刻意留空。
 
 ### Q: 前端无法访问后端 API
 A: 检查 Vite 代理配置 `vite.config.js`，确保 `target` 指向正确的后端地址。

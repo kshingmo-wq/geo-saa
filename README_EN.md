@@ -146,6 +146,7 @@ reports are one of these.
 The `admin / admin123` account seeded by `init.sql` has its BCrypt hash **committed
 in a public repository** — that is a leaked credential. In the `prod` profile the
 backend refuses to start while the stored hash still matches the default.
+**Skip this and the containers won't start** — it is not optional.
 
 ```bash
 # 1) Generate a BCrypt hash (plaintext stays in your terminal)
@@ -299,7 +300,16 @@ ai:
 ### Dev mode
 
 - RabbitMQ disabled by default (core features unaffected)
-- Default DB credentials: `root` / `root`
+- Dev DB credentials: `root` / `root`
+  - Sourced from `MYSQL_USER` / `MYSQL_PASSWORD` in `.env`. `.env.example` ships this
+    dev default, so `cp .env.example .env` is enough to start.
+  - **These values are for local development only.** Change them to a strong password
+    before production: docker-compose.yml consumes `${MYSQL_PASSWORD}` with no default,
+    so edit `.env` and restart the `mysql` container to apply.
+  - Note that `application-dev.yml` contains **no datasource section** (when no local
+    MySQL is running, `.env` alone suffices). Datasource is configured only in
+    `application-prod.yml`, entirely via `${...}` variable references — missing
+    values fail startup immediately.
 - Log level: `com.geosaa: debug`
 
 ## FAQ
@@ -312,7 +322,12 @@ Stop-Process -Id <PID> -Force
 ```
 
 ### Q: Database connection failed
-A: Ensure MySQL is running, credentials `root/root`, or edit `application-dev.yml`.
+A: First confirm the MySQL container is up (`docker compose ps`), then check
+`MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_USER` / `MYSQL_PASSWORD` in `.env`.
+With Docker, `MYSQL_HOST` should be `mysql` (the service name), not `localhost`;
+use `localhost` only for a local MySQL, in which case add the config under
+`spring.datasource` in `application-dev.yml` — that section is intentionally
+absent by default.
 
 ### Q: Frontend can't reach backend API
 A: Check Vite proxy config `vite.config.js`; ensure `target` points to the correct backend.
