@@ -179,9 +179,39 @@ docker compose logs backend | grep "GEO 定时采集"   # 期望出现采集完�
 | `compose-validate` | `docker compose config --quiet` 语法与变量闭环校验；`.env` 未入库检查 |
 | `docker-build` | 真实构建两个镜像；校验 jar + 探针存在；探针在无后端时正确判定 unhealthy；两个镜像均声明 `HEALTHCHECK` |
 
-这意味着**上述 5 个缺陷会被 CI 自动拦住**，不再依赖人工发现。
+这意味着**上述缺陷会被 CI 自动拦住**，不再依赖人工发现。
 
-本机想手动复现：
+### 实测结果（2026-10-14）
+
+本机 Docker daemon 因 `wsl.exe` 被系统 Program Blacklist 拦截，无法本地验证。
+改用 GitHub Actions（runner 自带 daemon）实跑，**全部通过**：
+
+| Job | 结果 | 耗时 |
+|-----|------|------|
+| `compose-validate` | ✅ success | 8s |
+| `docker-build` | ✅ success | 3m18s |
+| `ci`（单元测试） | ✅ success | 1m41s |
+
+`docker-build` 的实际输出，证明是真实构建而非走过场：
+
+```
+geo-saa-frontend    ci    64.6MB     # vite build ✓ built in 958ms
+geo-saa-backend     ci    319MB
+jar + probe present                          # app.jar 与 probe.jar 均产出
+health probe failed: java.net.ConnectException
+OK: 无后端时探针判定 unhealthy                 # 探针退出码为 1，符合预期
+{"Test":["CMD","java","-cp","probe.jar","HealthProbe"],...}   # backend HEALTHCHECK
+OK: 两个镜像均声明了 HEALTHCHECK
+```
+
+**首次运行确实拦下了一个真实缺陷**（探针源文件未进构建上下文导致构建失败），
+以及一个由静态审查误判引入的 jar 名回归。详见上方「一次误判及其更正」。
+
+> 若上游 PR 因安全策略停在 `action_required`，不必等管理员批准：
+> Actions 权限按仓库判定而非按 PR，在自有 fork 内开PR（同一分支 → main）
+> 即可正常触发。这是本项目验证 Docker 路径的常规手段。
+
+### 本机想手动复现
 
 ```bash
 docker compose --env-file .env config --quiet   # 只校验，不启动
