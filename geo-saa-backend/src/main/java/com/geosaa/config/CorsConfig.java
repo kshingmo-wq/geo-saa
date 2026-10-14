@@ -27,7 +27,9 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${cors.allowed-origins:http://localhost:5173}")
+    // 回退值与 application.yml 的 cors.allowed-origins 保持一致（含 localhost/127.0.0.1 成对，
+    // 缺一则用另一种形式打开前端会被 CORS 拦成 403「没有权限执行此操作」）
+    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000}")
     private String allowedOrigins;
 
     @Value("${cors.allow-credentials:true}")
