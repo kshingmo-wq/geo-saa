@@ -182,18 +182,23 @@ public class StatisticsService {
         Map<String, Object> trend = new LinkedHashMap<>();
         try {
             LambdaQueryWrapper<AiDiagnoseTask> wrapper = new LambdaQueryWrapper<>();
+            // 按 id 倒序取最近 7 条完成态任务：create_time 早期数据存在 NULL（历史遗留），
+            // 按它排序会退化成不确定顺序，且 ASC 会取到最旧的 7 条而非最近的。
+            // 趋势图关心的是「最近走势」，id 单调递增可作稳定替代排序键。
             wrapper.eq(AiDiagnoseTask::getStatus, Constant.TASK_STATUS_COMPLETED)
-                    .orderByAsc(AiDiagnoseTask::getCreateTime)
+                    .orderByDesc(AiDiagnoseTask::getId)
                     .last("LIMIT 7");
             List<AiDiagnoseTask> tasks = diagnoseTaskMapper.selectList(wrapper);
+            // 查出来是倒序（近→远），而 X 轴要按时间正序（远→近）才好读
+            Collections.reverse(tasks);
             List<String> categories = new ArrayList<>();
             List<Integer> series = new ArrayList<>();
             for (AiDiagnoseTask task : tasks) {
-                if (task.getCreateTime() != null) {
-                    categories.add(task.getCreateTime().format(DATE_FMT));
-                } else {
-                    categories.add("-");
-                }
+                // 时间缺失时不再填 "-"，改用序号占位：横杠在图上完全无法区分，
+                // 至少让 X 轴仍有可辨识的刻度，同时靠日志暴露数据问题。
+                categories.add(task.getCreateTime() != null
+                        ? task.getCreateTime().format(DATE_FMT)
+                        : "#" + (categories.size() + 1));
                 series.add(safeParseScore(task.getResultContent()));
             }
             trend.put("categories", categories);
