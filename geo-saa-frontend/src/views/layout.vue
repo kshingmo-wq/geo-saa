@@ -9,9 +9,7 @@
         :default-active="activeMenu"
         :collapse="sidebarCollapsed"
         :router="true"
-        background-color="#001529"
-        text-color="rgba(255,255,255,0.65)"
-        active-text-color="#fff"
+        :unique-opened="true"
         class="side-menu"
       >
         <el-menu-item index="/dashboard">
@@ -145,13 +143,19 @@ onMounted(() => {
   height: 100vh;
   overflow: hidden;
 }
+
+/* 深蓝而非纯黑：纯黑 (#000) 配高饱和选中块对比过硬，长时间注视更累 */
 .layout-aside {
-  background-color: #001529;
-  transition: width 0.3s ease;
+  --geo-menu-active: #1677ff;
+  --geo-menu-hover: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #0d2137 0%, #0a1a2c 100%);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 2px 0 12px rgba(15, 34, 58, 0.12);
 }
+
 .logo-container {
   height: 60px;
   display: flex;
@@ -159,9 +163,10 @@ onMounted(() => {
   justify-content: center;
   gap: 10px;
   padding: 0 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
   flex-shrink: 0;
+  user-select: none;
 }
 .logo-img {
   width: 32px;
@@ -170,37 +175,92 @@ onMounted(() => {
 }
 .logo-text {
   color: #fff;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
+  letter-spacing: 0.4px;
   white-space: nowrap;
 }
+
 .side-menu {
   border-right: none;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Element Plus 默认深色菜单底色与自定义背景冲突，清掉由 CSS 接管 */
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: rgba(255, 255, 255, 0.72);
+  --el-menu-active-color: #fff;
+  --el-menu-hover-bg-color: var(--geo-menu-hover);
+  padding: 8px;
 }
-.side-menu:not(.el-menu--collapse) {
-  width: 220px;
+
+/* 滚动条：默认样式在深色底上几乎不可见 */
+.side-menu::-webkit-scrollbar { width: 6px; }
+.side-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 3px;
 }
+.side-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+.side-menu::-webkit-scrollbar-track { background: transparent; }
+
+/* 选中态：左侧高亮竖条 + 主色底，比纯白块更克制，也保留了位置感 */
+.side-menu :deep(.el-menu-item.is-active) {
+  background: linear-gradient(90deg, var(--geo-menu-active) 0%, rgba(22, 119, 255, 0.75) 100%);
+  border-radius: 6px;
+  font-weight: 500;
+}
+.side-menu :deep(.el-menu-item.is-active)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  background: #fff;
+  border-radius: 0 2px 2px 0;
+}
+.side-menu :deep(.el-menu-item) {
+  border-radius: 6px;
+  margin-bottom: 2px;
+  height: 44px;
+  line-height: 44px;
+}
+.side-menu :deep(.el-sub-menu__title) {
+  border-radius: 6px;
+  height: 44px;
+  line-height: 44px;
+}
+.side-menu:not(.el-menu--collapse) { width: 220px; }
+
 .layout-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
   background: #fff;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid var(--el-border-color-lighter);
   height: 60px;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(15, 34, 58, 0.04);
 }
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 .collapse-btn {
   cursor: pointer;
-  color: #606266;
+  color: var(--el-text-color-regular);
+  padding: 6px;
+  border-radius: 6px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.collapse-btn:hover {
+  background: var(--el-fill-color-light);
+  color: var(--el-color-primary);
 }
 .header-right {
   display: flex;
@@ -211,21 +271,34 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  color: #606266;
+  color: var(--el-text-color-regular);
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
 }
+.user-dropdown:hover { background: var(--el-fill-color-light); }
 .username {
   font-size: 14px;
+  font-weight: 500;
 }
+
 .layout-main {
-  background-color: #f0f2f5;
+  /* 与侧栏渐变同一色系，避免大面积灰显得沉闷 */
+  background-color: #f4f6fa;
   padding: 20px;
   overflow-y: auto;
   flex: 1;
 }
+
 .fade-enter-active, .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.18s ease;
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-enter-active, .fade-leave-active,
+  .stat-card, .layout-aside, .collapse-btn { transition: none; }
 }
 </style>
